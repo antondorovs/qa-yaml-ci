@@ -71,6 +71,9 @@ but does not replace, validation against a real Kubernetes API server.
 - npm
 - Docker, optional for container-based checks
 
+Node.js runs the TypeScript files directly. The quality gate checks their types
+with `tsc --noEmit`, so no build step is needed.
+
 ## Run Locally
 
 Install the locked dependencies:
@@ -101,6 +104,7 @@ Run an individual check:
 
 ```bash
 npm run format:check
+npm run typecheck
 npm run validate
 npm test
 ```
@@ -197,9 +201,10 @@ npm test
 |   |-- test-data-retention-policy.schema.json
 |   `-- test-report-policy.schema.json
 |-- scripts/
-|   |-- lib/yaml-quality.mjs
-|   `-- validate-yaml.mjs
-|-- test/yaml-quality.test.mjs
+|   |-- lib/yaml-quality.ts
+|   `-- validate-yaml.ts
+|-- test/yaml-quality.test.ts
+|-- tsconfig.json
 `-- .gitlab-ci.yml
 ```
 
@@ -313,4 +318,4 @@ with Docker-in-Docker.
 Add new general YAML files anywhere outside ignored directories. Files matching
 `examples/*-test-plan.yaml` automatically use the QA test plan contract. To
 apply a different schema contract, register its path matcher in
-`scripts/lib/yaml-quality.mjs`.
+`scripts/lib/yaml-quality.ts`.

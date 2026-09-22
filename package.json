@@ -5,11 +5,12 @@
   "description": "A practical YAML quality gate for QA-oriented CI/CD examples.",
   "type": "module",
   "scripts": {
-    "format:check": "prettier --check README.md package.json .github .gitlab-ci.yml examples k8s schemas scripts test",
-    "validate": "node scripts/validate-yaml.mjs",
-    "test": "node --test",
-    "check": "npm run format:check && npm run validate && npm test",
-    "check:ci": "npm run format:check && npm run validate -- --report reports/yaml-quality.json && npm test",
+    "format:check": "prettier --check README.md package.json tsconfig.json .github .gitlab-ci.yml examples k8s schemas scripts test",
+    "typecheck": "tsc --noEmit",
+    "validate": "node scripts/validate-yaml.ts",
+    "test": "node --test test/yaml-quality.test.ts",
+    "check": "npm run format:check && npm run typecheck && npm run validate && npm test",
+    "check:ci": "npm run format:check && npm run typecheck && npm run validate -- --report reports/yaml-quality.json && npm test",
     "docker:build": "docker build --tag qa-yaml-ci-lab:local .",
     "docker:check": "npm run docker:build && docker run --rm qa-yaml-ci-lab:local"
   },
@@ -17,8 +18,10 @@
     "node": ">=24"
   },
   "devDependencies": {
+    "@types/node": "24.13.6",
     "ajv": "8.20.0",
     "prettier": "3.8.4",
+    "typescript": "7.0.2",
     "yaml": "2.9.0"
   }
 }

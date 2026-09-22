@@ -6,7 +6,7 @@ import path from "node:path";
 import {
   createValidationReport,
   validateRepository,
-} from "./lib/yaml-quality.mjs";
+} from "./lib/yaml-quality.ts";
 
 const usage = [
   "Usage: npm run validate -- [--report <path>] [--help]",
@@ -16,7 +16,7 @@ const usage = [
   "  --help           Show this help message.",
 ].join("\n");
 
-function readCliOptions(arguments_) {
+function readCliOptions(arguments_: string[]) {
   if (arguments_.length === 0) {
     return { reportPath: null, showHelp: false };
   }
@@ -55,7 +55,7 @@ let options;
 try {
   options = readCliOptions(process.argv.slice(2));
 } catch (error) {
-  console.error(error.message);
+  console.error(error instanceof Error ? error.message : String(error));
   console.error("");
   console.error(usage);
   process.exit(1);

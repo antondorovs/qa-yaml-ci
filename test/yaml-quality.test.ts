@@ -10,7 +10,7 @@ import { fileURLToPath } from "node:url";
 import {
   createValidationReport,
   validateRepository,
-} from "../scripts/lib/yaml-quality.mjs";
+} from "../scripts/lib/yaml-quality.ts";
 
 const testDirectory = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(testDirectory, "..");
@@ -40,7 +40,7 @@ async function createFixtureRepository() {
   return fixtureRoot;
 }
 
-async function withFixture(run) {
+async function withFixture(run: (fixtureRoot: string) => Promise<void>) {
   const fixtureRoot = await createFixtureRepository();
 
   try {
@@ -258,7 +258,7 @@ test("sorts contract-covered files in validation reports", () => {
 
 test("prints contract coverage in the validation CLI summary", async () => {
   const { stdout } = await execFileAsync(process.execPath, [
-    path.join(projectRoot, "scripts", "validate-yaml.mjs"),
+    path.join(projectRoot, "scripts", "validate-yaml.ts"),
   ]);
 
   const result = await validateRepository(projectRoot);
@@ -274,10 +274,15 @@ test("prints contract coverage in the validation CLI summary", async () => {
 test("rejects unknown validation CLI options", async () => {
   await assert.rejects(
     execFileAsync(process.execPath, [
-      path.join(projectRoot, "scripts", "validate-yaml.mjs"),
+      path.join(projectRoot, "scripts", "validate-yaml.ts"),
       "--reports",
     ]),
     (error) => {
+      assert(
+        error instanceof Error &&
+          "stderr" in error &&
+          typeof error.stderr === "string",
+      );
       assert.match(error.stderr, /Unknown option: --reports/);
       return true;
     },
@@ -287,10 +292,16 @@ test("rejects unknown validation CLI options", async () => {
 test("prints validation CLI usage for option errors", async () => {
   await assert.rejects(
     execFileAsync(process.execPath, [
-      path.join(projectRoot, "scripts", "validate-yaml.mjs"),
+      path.join(projectRoot, "scripts", "validate-yaml.ts"),
       "--reports",
     ]),
     (error) => {
+      assert(
+        error instanceof Error &&
+          "stderr" in error &&
+          typeof error.stderr === "string",
+      );
+      assert("code" in error);
       assert.equal(error.code, 1);
       assert.match(error.stderr, /^Unknown option: --reports/);
       assert.match(
@@ -305,7 +316,7 @@ test("prints validation CLI usage for option errors", async () => {
 
 test("prints validation CLI help", async () => {
   const { stdout } = await execFileAsync(process.execPath, [
-    path.join(projectRoot, "scripts", "validate-yaml.mjs"),
+    path.join(projectRoot, "scripts", "validate-yaml.ts"),
     "--help",
   ]);
 

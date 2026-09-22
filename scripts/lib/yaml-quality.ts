@@ -2,8 +2,27 @@ import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import Ajv2020 from "ajv/dist/2020.js";
+import { Ajv2020 } from "ajv/dist/2020.js";
 import { parseDocument } from "yaml";
+import type { ErrorObject, ValidateFunction } from "ajv";
+import type { YAMLError } from "yaml";
+
+interface ContractDefinition {
+  matches: (repositoryPath: string) => boolean;
+  name: string;
+  schema: string;
+}
+
+interface Contract {
+  name: string;
+  validate: ValidateFunction<unknown>;
+}
+
+export interface ValidationResult {
+  errors: string[];
+  files: string[];
+  contractFiles: string[];
+}
 
 const moduleDirectory = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(moduleDirectory, "../..");
@@ -15,7 +34,7 @@ const ignoredDirectories = new Set([
   "test-results",
 ]);
 
-const contractDefinitions = [
+const contractDefinitions: ContractDefinition[] = [
   {
     matches: (repositoryPath) =>
       repositoryPath.startsWith("examples/") &&
@@ -264,13 +283,13 @@ const contractDefinitions = [
   },
 ];
 
-function toRepositoryPath(root, filePath) {
+function toRepositoryPath(root: string, filePath: string): string {
   return path.relative(root, filePath).split(path.sep).join("/");
 }
 
-async function collectYamlFiles(directory) {
+async function collectYamlFiles(directory: string): Promise<string[]> {
   const entries = await readdir(directory, { withFileTypes: true });
-  const files = [];
+  const files: string[] = [];
 
   for (const entry of entries) {
     if (entry.isDirectory() && ignoredDirectories.has(entry.name)) {
@@ -289,34 +308,43 @@ async function collectYamlFiles(directory) {
   return files.sort();
 }
 
-async function loadContracts(root) {
+async function loadContracts(
+  root: string,
+): Promise<Map<ContractDefinition["matches"], Contract>> {
   const ajv = new Ajv2020({ allErrors: true, strict: true });
-  const contracts = new Map();
+  const contracts = new Map<ContractDefinition["matches"], Contract>();
 
   for (const definition of contractDefinitions) {
     const schemaPath = path.join(root, definition.schema);
     const schema = JSON.parse(await readFile(schemaPath, "utf8"));
     contracts.set(definition.matches, {
       name: definition.name,
-      validate: ajv.compile(schema),
+      validate: ajv.compile<unknown>(schema),
     });
   }
 
   return contracts;
 }
 
-function formatYamlError(file, error) {
+function formatYamlError(file: string, error: YAMLError): string {
   const location = error.linePos?.[0];
   const suffix = location ? `:${location.line}:${location.col}` : "";
   return `${file}${suffix}: ${error.message}`;
 }
 
-function formatSchemaError(file, contractName, error) {
+function formatSchemaError(
+  file: string,
+  contractName: string,
+  error: ErrorObject,
+): string {
   const instancePath = error.instancePath || "/";
   return `${file}: ${contractName} contract ${instancePath} ${error.message}`;
 }
 
-export function createValidationReport(result, root = projectRoot) {
+export function createValidationReport(
+  result: ValidationResult,
+  root = projectRoot,
+) {
   const errorFiles = [
     ...new Set(result.errors.map((error) => error.split(":", 1)[0])),
   ].sort();
@@ -339,11 +367,13 @@ export function createValidationReport(result, root = projectRoot) {
   };
 }
 
-export async function validateRepository(root = projectRoot) {
+export async function validateRepository(
+  root = projectRoot,
+): Promise<ValidationResult> {
   const files = await collectYamlFiles(root);
   const contracts = await loadContracts(root);
-  const errors = [];
-  const contractFiles = [];
+  const errors: string[] = [];
+  const contractFiles: string[] = [];
 
   for (const filePath of files) {
     const repositoryPath = toRepositoryPath(root, filePath);
@@ -371,12 +401,14 @@ export async function validateRepository(root = projectRoot) {
       continue;
     }
 
-    let value;
+    let value: unknown;
 
     try {
       value = document.toJS({ maxAliasCount: 50 });
     } catch (error) {
-      errors.push(`${repositoryPath}: ${error.message}`);
+      errors.push(
+        `${repositoryPath}: ${error instanceof Error ? error.message : String(error)}`,
+      );
       continue;
     }
 
@@ -397,7 +429,7 @@ export async function validateRepository(root = projectRoot) {
 
     if (contract && !contract.validate(value)) {
       errors.push(
-        ...contract.validate.errors.map((error) =>
+        ...(contract.validate.errors ?? []).map((error) =>
           formatSchemaError(repositoryPath, contract.name, error),
         ),
       );
