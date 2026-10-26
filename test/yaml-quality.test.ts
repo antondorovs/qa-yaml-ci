@@ -256,6 +256,29 @@ test("sorts contract-covered files in validation reports", () => {
   ]);
 });
 
+test("preserves colons in error file paths and counts each file once", () => {
+  const report = createValidationReport(
+    {
+      files: [
+        path.join(projectRoot, "release.yaml"),
+        path.join(projectRoot, "release.yaml:next.yaml"),
+        path.join(projectRoot, "valid.yaml"),
+      ],
+      errors: [
+        "release.yaml:next.yaml:2:1: Map keys must be unique",
+        "release.yaml:next.yaml: YAML document root must be an object",
+      ],
+      contractFiles: [],
+    },
+    projectRoot,
+  );
+
+  assert.deepEqual(report.errorFiles, ["release.yaml:next.yaml"]);
+  assert.equal(report.summary.filesWithErrors, 1);
+  assert.equal(report.summary.filesPassed, 2);
+  assert.equal(report.summary.errors, 2);
+});
+
 test("prints contract coverage in the validation CLI summary", async () => {
   const { stdout } = await execFileAsync(process.execPath, [
     path.join(projectRoot, "scripts", "validate-yaml.ts"),

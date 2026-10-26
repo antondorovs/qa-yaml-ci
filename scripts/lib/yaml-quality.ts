@@ -345,8 +345,20 @@ export function createValidationReport(
   result: ValidationResult,
   root = projectRoot,
 ) {
+  const repositoryFiles = result.files.map((file) =>
+    toRepositoryPath(root, file),
+  );
+  const errorPathCandidates = [...repositoryFiles].sort(
+    (left, right) => right.length - left.length,
+  );
   const errorFiles = [
-    ...new Set(result.errors.map((error) => error.split(":", 1)[0])),
+    ...new Set(
+      result.errors.map(
+        (error) =>
+          errorPathCandidates.find((file) => error.startsWith(`${file}:`)) ??
+          error.split(":", 1)[0],
+      ),
+    ),
   ].sort();
   const contractFiles = [...result.contractFiles].sort();
 
@@ -360,7 +372,7 @@ export function createValidationReport(
       filesWithErrors: errorFiles.length,
       contractFilesChecked: contractFiles.length,
     },
-    files: result.files.map((file) => toRepositoryPath(root, file)),
+    files: repositoryFiles,
     contractFiles,
     errors: result.errors,
     errorFiles,
