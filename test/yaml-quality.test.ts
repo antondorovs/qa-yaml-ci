@@ -461,6 +461,27 @@ test("rejects YAML documents whose root is not an object", async () => {
   });
 });
 
+test("rejects tagged YAML roots that do not produce plain objects", async () => {
+  await withFixture(async (fixtureRoot) => {
+    for (const [name, source] of [
+      ["set", "!!set { smoke: null }\n"],
+      ["timestamp", "!!timestamp 2026-10-28\n"],
+      ["binary", "!!binary c21va2U=\n"],
+      ["mapping", "!!map { suite: smoke }\n"],
+    ] as const) {
+      await writeFile(path.join(fixtureRoot, `${name}.yaml`), source);
+    }
+
+    const result = await validateRepository(fixtureRoot);
+
+    assert.deepEqual(result.errors, [
+      "binary.yaml: YAML document root must be an object",
+      "set.yaml: YAML document root must be an object",
+      "timestamp.yaml: YAML document root must be an object",
+    ]);
+  });
+});
+
 test("rejects example files without a registered contract", async () => {
   await withFixture(async (fixtureRoot) => {
     await writeFile(

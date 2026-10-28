@@ -12,7 +12,7 @@ Schema contracts to QA-specific examples.
 - YAML syntax across the repository
 - duplicate mapping keys
 - unresolved or unsupported YAML tags
-- object-shaped YAML document roots
+- plain mapping YAML document roots
 - excessive YAML alias expansion
 - empty YAML documents
 - registered JSON Schema contracts for every file under `examples/`

@@ -429,7 +429,10 @@ export async function validateRepository(
       continue;
     }
 
-    if (typeof value !== "object" || Array.isArray(value)) {
+    if (
+      typeof value !== "object" ||
+      Object.getPrototypeOf(value) !== Object.prototype
+    ) {
       errors.push(`${repositoryPath}: YAML document root must be an object`);
       continue;
     }
