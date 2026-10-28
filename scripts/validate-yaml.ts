@@ -24,7 +24,7 @@ function readCliOptions(arguments_: string[]) {
   if (arguments_[0] === "--help") {
     const extraArgument = arguments_[1];
 
-    if (extraArgument) {
+    if (extraArgument !== undefined) {
       throw new Error(`Unexpected argument: ${extraArgument}`);
     }
 
@@ -43,7 +43,7 @@ function readCliOptions(arguments_: string[]) {
 
   const extraArgument = arguments_[2];
 
-  if (extraArgument) {
+  if (extraArgument !== undefined) {
     throw new Error(`Unexpected argument: ${extraArgument}`);
   }
 

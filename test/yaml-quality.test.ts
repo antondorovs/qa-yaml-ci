@@ -337,6 +337,41 @@ test("prints validation CLI usage for option errors", async () => {
   );
 });
 
+test("rejects empty extra CLI arguments before writing a report", async () => {
+  const reportDirectory = await mkdtemp(path.join(tmpdir(), "qa-cli-report-"));
+  const reportPath = path.join(reportDirectory, "report.json");
+
+  try {
+    for (const arguments_ of [
+      ["--help", "", "--unknown"],
+      ["--report", reportPath, "", "--unknown"],
+    ]) {
+      await assert.rejects(
+        execFileAsync(process.execPath, [
+          path.join(projectRoot, "scripts", "validate-yaml.ts"),
+          ...arguments_,
+        ]),
+        (error) => {
+          assert(
+            error instanceof Error &&
+              "stderr" in error &&
+              typeof error.stderr === "string",
+          );
+          assert("code" in error);
+          assert.equal(error.code, 1);
+          assert.match(error.stderr, /^Unexpected argument:/);
+          assert.match(error.stderr, /Usage: npm run validate/);
+          return true;
+        },
+      );
+    }
+
+    await assert.rejects(readFile(reportPath), { code: "ENOENT" });
+  } finally {
+    await rm(reportDirectory, { recursive: true, force: true });
+  }
+});
+
 test("prints validation CLI help", async () => {
   const { stdout } = await execFileAsync(process.execPath, [
     path.join(projectRoot, "scripts", "validate-yaml.ts"),
