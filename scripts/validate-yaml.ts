@@ -67,11 +67,18 @@ if (options.showHelp) {
   const result = await validateRepository();
 
   if (options.reportPath) {
-    await mkdir(path.dirname(options.reportPath), { recursive: true });
-    await writeFile(
-      options.reportPath,
-      `${JSON.stringify(createValidationReport(result), null, 2)}\n`,
-    );
+    try {
+      await mkdir(path.dirname(options.reportPath), { recursive: true });
+      await writeFile(
+        options.reportPath,
+        `${JSON.stringify(createValidationReport(result), null, 2)}\n`,
+      );
+    } catch (error) {
+      console.error(
+        `Failed to write validation report to ${options.reportPath}: ${error instanceof Error ? error.message : String(error)}`,
+      );
+      process.exit(1);
+    }
     console.log(`Validation report written to ${options.reportPath}.`);
   }
 

@@ -372,6 +372,40 @@ test("rejects empty extra CLI arguments before writing a report", async () => {
   }
 });
 
+test("reports output write failures without an uncaught stack trace", async () => {
+  const reportDirectory = await mkdtemp(path.join(tmpdir(), "qa-cli-output-"));
+
+  try {
+    await assert.rejects(
+      execFileAsync(process.execPath, [
+        path.join(projectRoot, "scripts", "validate-yaml.ts"),
+        "--report",
+        reportDirectory,
+      ]),
+      (error) => {
+        assert(
+          error instanceof Error &&
+            "stderr" in error &&
+            typeof error.stderr === "string",
+        );
+        assert("code" in error);
+        assert.equal(error.code, 1);
+        assert.match(error.stderr, /^Failed to write validation report to /);
+        assert(error.stderr.includes(reportDirectory));
+        assert.doesNotMatch(error.stderr, /\n\s+at /);
+        assert("stdout" in error && typeof error.stdout === "string");
+        assert.doesNotMatch(
+          error.stdout,
+          /report written|quality gate passed/i,
+        );
+        return true;
+      },
+    );
+  } finally {
+    await rm(reportDirectory, { recursive: true, force: true });
+  }
+});
+
 test("prints validation CLI help", async () => {
   const { stdout } = await execFileAsync(process.execPath, [
     path.join(projectRoot, "scripts", "validate-yaml.ts"),
