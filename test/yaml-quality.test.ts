@@ -547,6 +547,32 @@ test("rejects duplicate mapping keys", async () => {
   });
 });
 
+test("rejects scalar keys that collide after conversion to object properties", async () => {
+  await withFixture(async (fixtureRoot) => {
+    for (const [name, source] of [
+      ["number", '1: first\n"1": second\n'],
+      ["boolean", 'true: first\n"true": second\n'],
+      ["null", 'null: first\n"null": second\n'],
+      ["nested", 'settings:\n  0x1: first\n  "1": second\n'],
+    ] as const) {
+      await writeFile(path.join(fixtureRoot, `${name}.yaml`), source);
+    }
+
+    const result = await validateRepository(fixtureRoot);
+
+    assert.equal(result.errors.length, 4);
+    for (const name of ["number", "boolean", "null", "nested"]) {
+      assert(
+        result.errors.some(
+          (error) =>
+            error.startsWith(`${name}.yaml:`) &&
+            error.includes("Map keys must be unique"),
+        ),
+      );
+    }
+  });
+});
+
 test("rejects unresolved YAML tags", async () => {
   await withFixture(async (fixtureRoot) => {
     await writeFile(

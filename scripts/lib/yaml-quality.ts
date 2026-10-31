@@ -3,7 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { Ajv2020 } from "ajv/dist/2020.js";
-import { parseDocument } from "yaml";
+import { isScalar, parseDocument } from "yaml";
 import type { ErrorObject, ValidateFunction } from "ajv";
 import type { YAMLError } from "yaml";
 
@@ -410,7 +410,10 @@ export async function validateRepository(
     const document = parseDocument(source, {
       prettyErrors: false,
       strict: true,
-      uniqueKeys: true,
+      uniqueKeys: (left, right) =>
+        isScalar(left) && isScalar(right)
+          ? String(left.value) === String(right.value)
+          : left === right,
     });
 
     const parsingIssues = [...document.errors, ...document.warnings];

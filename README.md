@@ -11,7 +11,7 @@ Schema contracts to QA-specific examples.
 
 - YAML syntax across the repository
 - valid UTF-8 source encoding
-- duplicate mapping keys
+- duplicate mapping keys, including collisions after conversion to object properties
 - unresolved or unsupported YAML tags
 - plain mapping YAML document roots
 - excessive YAML alias expansion
