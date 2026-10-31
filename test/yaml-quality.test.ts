@@ -417,6 +417,33 @@ test("prints validation CLI help", async () => {
   assert.match(stdout, /--help\s+Show this help message\./);
 });
 
+test("rejects invalid UTF-8 while accepting Unicode YAML", async () => {
+  await withFixture(async (fixtureRoot) => {
+    await writeFile(
+      path.join(fixtureRoot, "invalid-encoding.yaml"),
+      Buffer.concat([
+        Buffer.from("suite: "),
+        Buffer.from([0xff]),
+        Buffer.from("\n"),
+      ]),
+    );
+    await writeFile(
+      path.join(fixtureRoot, "unicode.yaml"),
+      'suite: регрессия\nlabel: "✓"\n',
+    );
+
+    const result = await validateRepository(fixtureRoot);
+
+    assert.deepEqual(result.errors, [
+      "invalid-encoding.yaml: YAML source must be valid UTF-8",
+    ]);
+    assert(result.files.includes(path.join(fixtureRoot, "unicode.yaml")));
+    const report = createValidationReport(result, fixtureRoot);
+    assert.deepEqual(report.errorFiles, ["invalid-encoding.yaml"]);
+    assert.equal(report.summary.filesPassed, result.files.length - 1);
+  });
+});
+
 test("reports YAML syntax errors with the repository path", async () => {
   await withFixture(async (fixtureRoot) => {
     await writeFile(

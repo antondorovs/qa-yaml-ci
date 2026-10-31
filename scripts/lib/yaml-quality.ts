@@ -397,7 +397,16 @@ export async function validateRepository(
       contractFiles.push(repositoryPath);
     }
 
-    const source = await readFile(filePath, "utf8");
+    const sourceBytes = await readFile(filePath);
+    let source: string;
+
+    try {
+      source = new TextDecoder("utf-8", { fatal: true }).decode(sourceBytes);
+    } catch {
+      errors.push(`${repositoryPath}: YAML source must be valid UTF-8`);
+      continue;
+    }
+
     const document = parseDocument(source, {
       prettyErrors: false,
       strict: true,

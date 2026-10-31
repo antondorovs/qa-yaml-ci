@@ -10,6 +10,7 @@ Schema contracts to QA-specific examples.
 ## What It Checks
 
 - YAML syntax across the repository
+- valid UTF-8 source encoding
 - duplicate mapping keys
 - unresolved or unsupported YAML tags
 - plain mapping YAML document roots
