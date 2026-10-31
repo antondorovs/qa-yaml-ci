@@ -444,6 +444,61 @@ test("rejects invalid UTF-8 while accepting Unicode YAML", async () => {
   });
 });
 
+test("rejects malformed UTF-8 sequences in repository validation reports", async () => {
+  await withFixture(async (fixtureRoot) => {
+    const invalidSequences = [
+      ["continuation", [0x80]],
+      ["overlong", [0xc0, 0xaf]],
+      ["surrogate", [0xed, 0xa0, 0x80]],
+      ["truncated", [0xe2, 0x82]],
+    ] as const;
+
+    for (const [name, bytes] of invalidSequences) {
+      await writeFile(
+        path.join(fixtureRoot, `${name}.yaml`),
+        Buffer.concat([
+          Buffer.from('suite: "'),
+          Buffer.from(bytes),
+          Buffer.from('"\n'),
+        ]),
+      );
+    }
+
+    const result = await validateRepository(fixtureRoot);
+    const report = createValidationReport(result, fixtureRoot);
+
+    assert.deepEqual(
+      report.errorFiles,
+      invalidSequences.map(([name]) => `${name}.yaml`),
+    );
+    assert.equal(report.summary.errors, invalidSequences.length);
+    assert.equal(report.summary.filesWithErrors, invalidSequences.length);
+    assert.equal(
+      report.summary.filesPassed,
+      result.files.length - invalidSequences.length,
+    );
+    assert(
+      result.errors.every((error) =>
+        error.endsWith("YAML source must be valid UTF-8"),
+      ),
+    );
+  });
+});
+
+test("accepts a UTF-8 BOM, supplementary characters and a literal replacement character", async () => {
+  await withFixture(async (fixtureRoot) => {
+    await writeFile(
+      path.join(fixtureRoot, "unicode-bom.yaml"),
+      '\uFEFFsuite: "🚀 regression"\nlabel: "\uFFFD"\n',
+    );
+
+    const result = await validateRepository(fixtureRoot);
+
+    assert.deepEqual(result.errors, []);
+    assert(result.files.includes(path.join(fixtureRoot, "unicode-bom.yaml")));
+  });
+});
+
 test("reports YAML syntax errors with the repository path", async () => {
   await withFixture(async (fixtureRoot) => {
     await writeFile(
