@@ -412,7 +412,8 @@ export async function validateRepository(
       strict: true,
       uniqueKeys: (left, right) =>
         isScalar(left) && isScalar(right)
-          ? String(left.value) === String(right.value)
+          ? (left.value === null ? "" : String(left.value)) ===
+            (right.value === null ? "" : String(right.value))
           : left === right,
     });
 

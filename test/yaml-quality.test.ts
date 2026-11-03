@@ -552,7 +552,7 @@ test("rejects scalar keys that collide after conversion to object properties", a
     for (const [name, source] of [
       ["number", '1: first\n"1": second\n'],
       ["boolean", 'true: first\n"true": second\n'],
-      ["null", 'null: first\n"null": second\n'],
+      ["null", 'null: first\n"": second\n'],
       ["nested", 'settings:\n  0x1: first\n  "1": second\n'],
     ] as const) {
       await writeFile(path.join(fixtureRoot, `${name}.yaml`), source);
@@ -570,6 +570,19 @@ test("rejects scalar keys that collide after conversion to object properties", a
         ),
       );
     }
+  });
+});
+
+test("allows null and the literal null string as distinct mapping keys", async () => {
+  await withFixture(async (fixtureRoot) => {
+    await writeFile(
+      path.join(fixtureRoot, "distinct-null-keys.yaml"),
+      'null: first\n"null": second\n',
+    );
+
+    const result = await validateRepository(fixtureRoot);
+
+    assert.deepEqual(result.errors, []);
   });
 });
 
