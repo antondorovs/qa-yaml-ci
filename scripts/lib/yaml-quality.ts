@@ -3,7 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { Ajv2020 } from "ajv/dist/2020.js";
-import { isScalar, parseDocument } from "yaml";
+import { isScalar, parseDocument, visit } from "yaml";
 import type { ErrorObject, ValidateFunction } from "ajv";
 import type { YAMLError } from "yaml";
 
@@ -422,6 +422,23 @@ export async function validateRepository(
     if (parsingIssues.length > 0) {
       errors.push(
         ...parsingIssues.map((error) => formatYamlError(repositoryPath, error)),
+      );
+      continue;
+    }
+
+    let hasUnsupportedKey = false;
+    visit(document, {
+      Pair(_key, pair) {
+        if (pair.key !== null && !isScalar(pair.key)) {
+          hasUnsupportedKey = true;
+          return visit.BREAK;
+        }
+      },
+    });
+
+    if (hasUnsupportedKey) {
+      errors.push(
+        `${repositoryPath}: YAML mapping keys must be scalar values, not collections or aliases`,
       );
       continue;
     }

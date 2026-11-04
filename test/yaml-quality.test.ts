@@ -586,6 +586,50 @@ test("allows null and the literal null string as distinct mapping keys", async (
   });
 });
 
+test("rejects collection and alias mapping keys before object conversion", async () => {
+  await withFixture(async (fixtureRoot) => {
+    for (const [name, source] of [
+      ["sequence-key", '? [a, b]\n: first\n"[ a, b ]": second\n'],
+      ["mapping-key", '? { a: b }\n: first\n"{ a: b }": second\n'],
+      ["alias-key", "anchor: &key suite\n? *key\n: first\nsuite: second\n"],
+      ["nested-key", "settings:\n  ? [a, b]\n  : first\n"],
+    ] as const) {
+      await writeFile(path.join(fixtureRoot, `${name}.yaml`), source);
+    }
+
+    const result = await validateRepository(fixtureRoot);
+    const report = createValidationReport(result, fixtureRoot);
+
+    assert.deepEqual(report.errorFiles, [
+      "alias-key.yaml",
+      "mapping-key.yaml",
+      "nested-key.yaml",
+      "sequence-key.yaml",
+    ]);
+    assert.equal(result.errors.length, 4);
+    assert(
+      result.errors.every((error) =>
+        error.endsWith(
+          "YAML mapping keys must be scalar values, not collections or aliases",
+        ),
+      ),
+    );
+  });
+});
+
+test("continues to accept aliases in mapping values", async () => {
+  await withFixture(async (fixtureRoot) => {
+    await writeFile(
+      path.join(fixtureRoot, "alias-values.yaml"),
+      "defaults: &defaults { suite: smoke }\nsettings: *defaults\n",
+    );
+
+    const result = await validateRepository(fixtureRoot);
+
+    assert.deepEqual(result.errors, []);
+  });
+});
+
 test("rejects unresolved YAML tags", async () => {
   await withFixture(async (fixtureRoot) => {
     await writeFile(
