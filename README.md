@@ -102,6 +102,8 @@ Generate the same JSON report used by CI:
 npm run validate -- --report reports/yaml-quality.json
 ```
 
+Report destinations must use the `.json` file extension.
+
 Run an individual check:
 
 ```bash

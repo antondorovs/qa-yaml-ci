@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { cp, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -372,15 +372,52 @@ test("rejects empty extra CLI arguments before writing a report", async () => {
   }
 });
 
-test("reports output write failures without an uncaught stack trace", async () => {
-  const reportDirectory = await mkdtemp(path.join(tmpdir(), "qa-cli-output-"));
+test("rejects non-JSON report paths without overwriting them", async () => {
+  const reportDirectory = await mkdtemp(path.join(tmpdir(), "qa-cli-report-"));
+  const reportPath = path.join(reportDirectory, "quality-gate.yaml");
+  const originalSource = "suite: smoke\n";
 
   try {
+    await writeFile(reportPath, originalSource);
+
     await assert.rejects(
       execFileAsync(process.execPath, [
         path.join(projectRoot, "scripts", "validate-yaml.ts"),
         "--report",
-        reportDirectory,
+        reportPath,
+      ]),
+      (error) => {
+        assert(
+          error instanceof Error &&
+            "stderr" in error &&
+            typeof error.stderr === "string",
+        );
+        assert("code" in error);
+        assert.equal(error.code, 1);
+        assert.match(error.stderr, /^--report requires a \.json file path/);
+        assert.match(error.stderr, /Usage: npm run validate/);
+        return true;
+      },
+    );
+
+    assert.equal(await readFile(reportPath, "utf8"), originalSource);
+  } finally {
+    await rm(reportDirectory, { recursive: true, force: true });
+  }
+});
+
+test("reports output write failures without an uncaught stack trace", async () => {
+  const reportDirectory = await mkdtemp(path.join(tmpdir(), "qa-cli-output-"));
+  const reportPath = path.join(reportDirectory, "report.json");
+
+  try {
+    await mkdir(reportPath);
+
+    await assert.rejects(
+      execFileAsync(process.execPath, [
+        path.join(projectRoot, "scripts", "validate-yaml.ts"),
+        "--report",
+        reportPath,
       ]),
       (error) => {
         assert(
@@ -391,7 +428,7 @@ test("reports output write failures without an uncaught stack trace", async () =
         assert("code" in error);
         assert.equal(error.code, 1);
         assert.match(error.stderr, /^Failed to write validation report to /);
-        assert(error.stderr.includes(reportDirectory));
+        assert(error.stderr.includes(reportPath));
         assert.doesNotMatch(error.stderr, /\n\s+at /);
         assert("stdout" in error && typeof error.stdout === "string");
         assert.doesNotMatch(
