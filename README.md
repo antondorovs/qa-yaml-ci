@@ -313,7 +313,8 @@ validation errors without machine-specific absolute paths. This lets CI output
 identify both validation coverage and the scope of a failed check quickly. File
 lists are sorted to keep generated artifacts reproducible.
 
-The GitHub workflow runs the Docker quality image automatically. The GitLab
+The Docker quality image runs as the unprivileged `node` user. The GitHub
+workflow runs the Docker quality image automatically. The GitLab
 pipeline includes the same Docker check as a manual job for runners configured
 with Docker-in-Docker.
 

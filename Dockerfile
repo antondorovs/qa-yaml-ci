@@ -1,10 +1,13 @@
 FROM node:24-alpine
 
 WORKDIR /workspace
+RUN chown node:node /workspace
 
-COPY package.json package-lock.json ./
+COPY --chown=node:node package.json package-lock.json ./
 RUN npm ci
 
-COPY . .
+COPY --chown=node:node . .
+
+USER node
 
 CMD ["npm", "run", "check:ci"]
