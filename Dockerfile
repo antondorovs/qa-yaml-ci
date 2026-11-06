@@ -7,6 +7,7 @@ COPY --chown=node:node package.json package-lock.json ./
 RUN npm ci
 
 COPY --chown=node:node . .
+RUN chmod -R u+w /workspace
 
 USER node
 
