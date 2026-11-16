@@ -414,6 +414,34 @@ test("rejects non-JSON report paths without overwriting them", async () => {
   }
 });
 
+test("rejects a trailing separator on the report path", async () => {
+  const reportDirectory = await mkdtemp(path.join(tmpdir(), "qa-cli-report-"));
+  const reportPath = path.join(reportDirectory, "report.json");
+
+  try {
+    await writeFile(reportPath, "{}\n");
+    await assert.rejects(
+      execFileAsync(process.execPath, [
+        path.join(projectRoot, "scripts", "validate-yaml.ts"),
+        "--report",
+        reportPath + path.sep,
+      ]),
+      (error: unknown) => {
+        assert(error instanceof Error && "code" in error && "stderr" in error);
+        assert.equal(error.code, 1);
+        assert.match(
+          String(error.stderr),
+          /^--report requires a \.json file path/,
+        );
+        return true;
+      },
+    );
+    assert.equal(await readFile(reportPath, "utf8"), "{}\n");
+  } finally {
+    await rm(reportDirectory, { recursive: true, force: true });
+  }
+});
+
 test("reports output write failures without an uncaught stack trace", async () => {
   const reportDirectory = await mkdtemp(path.join(tmpdir(), "qa-cli-output-"));
   const reportPath = path.join(reportDirectory, "report.json");

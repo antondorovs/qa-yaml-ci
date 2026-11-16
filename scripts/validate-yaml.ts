@@ -41,7 +41,10 @@ function readCliOptions(arguments_: string[]) {
     throw new Error("--report requires a file path");
   }
 
-  if (path.extname(reportPath).toLowerCase() !== ".json") {
+  if (
+    path.normalize(reportPath).endsWith(path.sep) ||
+    path.extname(reportPath).toLowerCase() !== ".json"
+  ) {
     throw new Error("--report requires a .json file path");
   }
 
