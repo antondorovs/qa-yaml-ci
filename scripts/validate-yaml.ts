@@ -77,13 +77,13 @@ if (options.showHelp) {
         options.reportPath,
         `${JSON.stringify(createValidationReport(result), null, 2)}\n`,
       );
+      console.log(`Validation report written to ${options.reportPath}.`);
     } catch (error) {
       console.error(
         `Failed to write validation report to ${options.reportPath}: ${error instanceof Error ? error.message : String(error)}`,
       );
-      process.exit(1);
+      process.exitCode = 1;
     }
-    console.log(`Validation report written to ${options.reportPath}.`);
   }
 
   if (result.errors.length > 0) {
@@ -94,7 +94,7 @@ if (options.showHelp) {
     }
 
     process.exitCode = 1;
-  } else {
+  } else if (!process.exitCode) {
     console.log(
       `YAML quality gate passed for ${result.files.length} files; ${result.contractFiles.length} contract-covered files checked.`,
     );

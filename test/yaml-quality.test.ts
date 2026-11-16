@@ -1,6 +1,14 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import {
+  cp,
+  mkdir,
+  mkdtemp,
+  readFile,
+  rm,
+  symlink,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -441,6 +449,42 @@ test("reports output write failures without an uncaught stack trace", async () =
   } finally {
     await rm(reportDirectory, { recursive: true, force: true });
   }
+});
+
+test("reports YAML errors even when the JSON report cannot be written", async () => {
+  await withFixture(async (fixtureRoot) => {
+    const reportPath = path.join(fixtureRoot, "report.json");
+    await mkdir(reportPath);
+    await writeFile(path.join(fixtureRoot, "broken.yaml"), "suite: [\n");
+    await cp(
+      path.join(projectRoot, "scripts"),
+      path.join(fixtureRoot, "scripts"),
+      { recursive: true },
+    );
+    await symlink(
+      path.join(projectRoot, "node_modules"),
+      path.join(fixtureRoot, "node_modules"),
+      "junction",
+    );
+
+    await assert.rejects(
+      execFileAsync(process.execPath, [
+        path.join(fixtureRoot, "scripts", "validate-yaml.ts"),
+        "--report",
+        reportPath,
+      ]),
+      (error: unknown) => {
+        assert(error instanceof Error && "code" in error && "stderr" in error);
+        assert.equal(error.code, 1);
+        assert.equal(typeof error.stderr, "string");
+        const stderr = String(error.stderr);
+        assert.match(stderr, /Failed to write validation report/);
+        assert.match(stderr, /YAML quality gate failed/);
+        assert.match(stderr, /broken\.yaml:/);
+        return true;
+      },
+    );
+  });
 });
 
 test("prints validation CLI help", async () => {
