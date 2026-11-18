@@ -71,7 +71,16 @@ try {
 if (options.showHelp) {
   console.log(usage);
 } else {
-  const result = await validateRepository();
+  let result;
+  try {
+    result = await validateRepository();
+  } catch (error) {
+    console.error(
+      "Failed to validate repository: " +
+        (error instanceof Error ? error.message : String(error)),
+    );
+    process.exit(1);
+  }
 
   if (options.reportPath) {
     try {
