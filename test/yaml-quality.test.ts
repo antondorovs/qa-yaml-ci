@@ -545,6 +545,47 @@ test("reports missing schemas without an uncaught stack trace", async () => {
   });
 });
 
+for (const [name, schema, diagnostic] of [
+  ["malformed JSON", "{", /JSON/],
+  ["invalid schema", '{"type":"not-a-type"}', /schema is invalid/],
+] as const) {
+  test(`identifies the schema file for ${name} failures`, async () => {
+    await withFixture(async (fixtureRoot) => {
+      await writeFile(
+        path.join(fixtureRoot, "schemas", "quality-gate.schema.json"),
+        schema,
+      );
+      await cp(
+        path.join(projectRoot, "scripts"),
+        path.join(fixtureRoot, "scripts"),
+        { recursive: true },
+      );
+      await symlink(
+        path.join(projectRoot, "node_modules"),
+        path.join(fixtureRoot, "node_modules"),
+        "junction",
+      );
+      await assert.rejects(
+        execFileAsync(process.execPath, [
+          path.join(fixtureRoot, "scripts", "validate-yaml.ts"),
+        ]),
+        (error: unknown) => {
+          assert(
+            error instanceof Error && "code" in error && "stderr" in error,
+          );
+          assert.equal(error.code, 1);
+          const stderr = String(error.stderr);
+          assert.match(stderr, /^Failed to validate repository: /);
+          assert.match(stderr, /schemas\/quality-gate\.schema\.json/);
+          assert.match(stderr, diagnostic);
+          assert.doesNotMatch(stderr, /\n\s+at /);
+          return true;
+        },
+      );
+    });
+  });
+}
+
 test("prints validation CLI help", async () => {
   const { stdout } = await execFileAsync(process.execPath, [
     path.join(projectRoot, "scripts", "validate-yaml.ts"),

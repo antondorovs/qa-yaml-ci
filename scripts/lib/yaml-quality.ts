@@ -316,11 +316,18 @@ async function loadContracts(
 
   for (const definition of contractDefinitions) {
     const schemaPath = path.join(root, definition.schema);
-    const schema = JSON.parse(await readFile(schemaPath, "utf8"));
-    contracts.set(definition.matches, {
-      name: definition.name,
-      validate: ajv.compile<unknown>(schema),
-    });
+    try {
+      const schema = JSON.parse(await readFile(schemaPath, "utf8"));
+      contracts.set(definition.matches, {
+        name: definition.name,
+        validate: ajv.compile<unknown>(schema),
+      });
+    } catch (error) {
+      throw new Error(
+        `Failed to load schema ${definition.schema}: ${error instanceof Error ? error.message : String(error)}`,
+        { cause: error },
+      );
+    }
   }
 
   return contracts;
