@@ -586,6 +586,33 @@ for (const [name, schema, diagnostic] of [
   });
 }
 
+test("names unexpected contract properties at root and nested paths", async () => {
+  await withFixture(async (fixtureRoot) => {
+    const file = path.join(fixtureRoot, "examples", "qa-test-plan.yaml");
+    const source = await readFile(file, "utf8");
+    await writeFile(
+      file,
+      source
+        .replace("version: 1", "version: 1\nunexpectedRoot: true")
+        .replaceAll(
+          "    expected:",
+          "    unexpectedNested: true\n    expected:",
+        ),
+    );
+
+    const result = await validateRepository(fixtureRoot);
+    assert.deepEqual(result.errors, [
+      'examples/qa-test-plan.yaml: qa-test-plan contract / must NOT have additional properties ("unexpectedRoot")',
+      'examples/qa-test-plan.yaml: qa-test-plan contract /tests/0 must NOT have additional properties ("unexpectedNested")',
+      'examples/qa-test-plan.yaml: qa-test-plan contract /tests/1 must NOT have additional properties ("unexpectedNested")',
+    ]);
+    const report = createValidationReport(result, fixtureRoot);
+    assert.deepEqual(report.errors, result.errors);
+    assert.deepEqual(report.errorFiles, ["examples/qa-test-plan.yaml"]);
+    assert.equal(report.summary.filesWithErrors, 1);
+  });
+});
+
 test("prints validation CLI help", async () => {
   const { stdout } = await execFileAsync(process.execPath, [
     path.join(projectRoot, "scripts", "validate-yaml.ts"),

@@ -220,7 +220,8 @@ Syntax and duplicate-key errors identify the affected file:
 examples/broken.yaml: Map keys must be unique
 ```
 
-Schema failures include the contract and JSON path:
+Schema failures include the contract and JSON path. Unexpected-property errors
+also name the rejected property:
 
 ```text
 examples/qa-test-plan.yaml: qa-test-plan contract /tests/0 must have required property 'expected'

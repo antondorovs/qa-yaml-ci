@@ -345,7 +345,11 @@ function formatSchemaError(
   error: ErrorObject,
 ): string {
   const instancePath = error.instancePath || "/";
-  return `${file}: ${contractName} contract ${instancePath} ${error.message}`;
+  const property =
+    error.keyword === "additionalProperties"
+      ? ` (${JSON.stringify(error.params.additionalProperty)})`
+      : "";
+  return `${file}: ${contractName} contract ${instancePath} ${error.message}${property}`;
 }
 
 export function createValidationReport(
